@@ -47,5 +47,6 @@ async def load_tenant_skills(tenant_id: str) -> list[BaseTool]:
 
 
 async def load_mcp_tools(tenant_id: str) -> list[BaseTool]:
-    """Load MCP tools for a tenant. Placeholder for Phase 3."""
-    return []
+    """Load MCP tools for a tenant."""
+    from src.agent.mcp_loader import load_mcp_tools as _load
+    return await _load(tenant_id)
