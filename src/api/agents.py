@@ -1,5 +1,7 @@
 """Agent configuration API routes."""
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.deps import get_current_user
@@ -25,7 +27,7 @@ async def create_agent(body: AgentCreate, user: dict = Depends(get_current_user)
         "INSERT INTO agents (tenant_id, name, model, system_prompt, temperature, config) "
         "VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
         user["tenant_id"], body.name, body.model, body.system_prompt,
-        body.temperature, str(body.config),
+        body.temperature, json.dumps(body.config),
     )
     return AgentResponse(**row)
 
@@ -58,7 +60,7 @@ async def update_agent(
         val = getattr(body, field, None)
         if val is not None:
             updates.append(f"{field} = %s")
-            params.append(str(val) if isinstance(val, dict) else val)
+            params.append(json.dumps(val) if isinstance(val, dict) else val)
 
     if not updates:
         return AgentResponse(**existing)

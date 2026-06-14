@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class AgentCreate(BaseModel):
-    tenant_id: UUID
+    tenant_id: UUID | None = None
     name: str = Field(default="default", max_length=255)
     model: str = Field(default="gpt-4o")
     system_prompt: str = Field(default="You are a helpful store manager assistant.")

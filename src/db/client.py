@@ -1,37 +1,51 @@
 """Async PostgreSQL connection pool and query helpers."""
 
+import asyncio
+import json
 import os
 from contextlib import asynccontextmanager
 from typing import Any
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import set_json_loads
 from psycopg_pool import AsyncConnectionPool
 
+# Register JSON/JSONB loaders globally so columns return Python objects
+set_json_loads(loads=json.loads)
+
 _pool: AsyncConnectionPool | None = None
+_pool_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def get_pool() -> AsyncConnectionPool:
     """Get or create the global async connection pool."""
-    global _pool
-    if _pool is None:
+    global _pool, _pool_loop
+    loop = asyncio.get_running_loop()
+    if _pool is None or _pool_loop is not loop:
+        # Discard old pool without closing — workers may be on a dead event loop
+        _pool = None
+        _pool_loop = None
         uri = os.environ["DATABASE_URI"]
         _pool = AsyncConnectionPool(
             conninfo=uri,
             min_size=2,
             max_size=20,
+            open=False,
             kwargs={"row_factory": dict_row, "autocommit": True},
         )
         await _pool.open()
+        _pool_loop = loop
     return _pool
 
 
 async def close_pool() -> None:
     """Close the global pool."""
-    global _pool
+    global _pool, _pool_loop
     if _pool is not None:
         await _pool.close()
         _pool = None
+        _pool_loop = None
 
 
 async def execute(query: str, *args: Any) -> None:

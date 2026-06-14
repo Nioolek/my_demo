@@ -1,29 +1,25 @@
-import os
+import uuid
+
 import pytest
 
-os.environ.setdefault("DATABASE_URI", "postgresql://storeagent:storeagent@localhost:5432/storeagent")
-os.environ.setdefault("JWT_SECRET", "test-secret")
-os.environ.setdefault("JWT_ALGORITHM", "HS256")
+from src.auth import create_token, verify_token
+from src.db.client import execute
 
 pytestmark = pytest.mark.integration
 
 
 @pytest.mark.asyncio
-async def test_login_flow():
+async def test_login_flow(_init_pool):
     """Test the full login flow: create tenant+user, then login."""
-    from src.db.client import execute
-    from src.auth import create_token, verify_token
-    import uuid
-
     tenant_id = str(uuid.uuid4())
     await execute(
         "INSERT INTO tenants (id, name) VALUES (%s, %s)",
-        tenant_id, "Auth Test Store"
+        tenant_id, "Auth Test Store",
     )
     await execute(
         "INSERT INTO users (id, tenant_id, name, role, channel_source) "
         "VALUES (%s, %s, %s, %s, %s)",
-        "auth-test-user", tenant_id, "Auth Tester", "manager", "console"
+        "auth-test-user", tenant_id, "Auth Tester", "manager", "console",
     )
 
     token = create_token("auth-test-user", tenant_id)

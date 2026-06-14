@@ -1,9 +1,10 @@
 """Skill management API with approval workflow."""
 
-from fastapi import APIRouter, Depends, HTTPException
-from starlette.requests import Request
+import json
 
-from src.api.deps import get_current_user, get_tenant_id
+from fastapi import APIRouter, Depends, HTTPException
+
+from src.api.deps import get_current_user
 from src.db.client import execute, fetch_all, fetch_one
 from src.models.skill import (
     SkillCreate, SkillResponse, SkillUpdate,
@@ -37,10 +38,30 @@ async def create_skill(body: SkillCreate, user: dict = Depends(get_current_user)
         SkillStatus.DRAFT.value,
         body.content,
         user["sub"],
-        str(body.config),
-        str(body.channels),
+        json.dumps(body.config),
+        json.dumps(body.channels),
     )
     return SkillResponse(**row)
+
+
+@router.get("/pending", response_model=list[SkillResponse])
+async def list_pending_skills(user: dict = Depends(get_current_user)):
+    """List all pending skills (admin view)."""
+    rows = await fetch_all(
+        "SELECT * FROM skills_meta WHERE status = %s ORDER BY updated_at DESC",
+        SkillStatus.PENDING.value,
+    )
+    return [SkillResponse(**r) for r in rows]
+
+
+@router.get("/system", response_model=list[SkillResponse])
+async def list_system_skills(user: dict = Depends(get_current_user)):
+    """List system-level skills (read-only)."""
+    rows = await fetch_all(
+        "SELECT * FROM skills_meta WHERE scope = %s ORDER BY name",
+        SkillScope.SYSTEM.value,
+    )
+    return [SkillResponse(**r) for r in rows]
 
 
 @router.put("/{skill_id}", response_model=SkillResponse)
@@ -65,7 +86,7 @@ async def update_skill(
         params.append(body.content)
     if body.config is not None:
         updates.append(f"config = %s")
-        params.append(str(body.config))
+        params.append(json.dumps(body.config))
 
     if not updates:
         return SkillResponse(**skill)
@@ -176,23 +197,3 @@ async def delete_skill(skill_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(400, "Only disabled skills can be deleted")
     await execute("DELETE FROM skills_meta WHERE id = %s", skill_id)
     return {"detail": "Deleted"}
-
-
-@router.get("/pending", response_model=list[SkillResponse])
-async def list_pending_skills(user: dict = Depends(get_current_user)):
-    """List all pending skills (admin view)."""
-    rows = await fetch_all(
-        "SELECT * FROM skills_meta WHERE status = %s ORDER BY updated_at DESC",
-        SkillStatus.PENDING.value,
-    )
-    return [SkillResponse(**r) for r in rows]
-
-
-@router.get("/system", response_model=list[SkillResponse])
-async def list_system_skills(user: dict = Depends(get_current_user)):
-    """List system-level skills (read-only)."""
-    rows = await fetch_all(
-        "SELECT * FROM skills_meta WHERE scope = %s ORDER BY name",
-        SkillScope.SYSTEM.value,
-    )
-    return [SkillResponse(**r) for r in rows]

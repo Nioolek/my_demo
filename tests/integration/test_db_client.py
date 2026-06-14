@@ -1,11 +1,12 @@
 import pytest
+
 from src.db.client import get_pool, execute, fetch_one, fetch_all
 
 pytestmark = pytest.mark.integration
 
 
 @pytest.mark.asyncio
-async def test_pool_connects():
+async def test_pool_connects(_init_pool):
     pool = await get_pool()
     assert pool is not None
     result = await fetch_one("SELECT 1 AS val")
@@ -13,7 +14,7 @@ async def test_pool_connects():
 
 
 @pytest.mark.asyncio
-async def test_execute_insert_and_fetch():
+async def test_execute_insert_and_fetch(_init_pool):
     await execute("CREATE TABLE IF NOT EXISTS _test_tbl (id INT, name TEXT)")
     await execute("INSERT INTO _test_tbl (id, name) VALUES (%s, %s)", 1, "alice")
     row = await fetch_one("SELECT name FROM _test_tbl WHERE id = %s", 1)
@@ -22,7 +23,7 @@ async def test_execute_insert_and_fetch():
 
 
 @pytest.mark.asyncio
-async def test_fetch_all():
+async def test_fetch_all(_init_pool):
     await execute("CREATE TABLE IF NOT EXISTS _test_tbl2 (id INT)")
     await execute("INSERT INTO _test_tbl2 VALUES (%s)", 1)
     await execute("INSERT INTO _test_tbl2 VALUES (%s)", 2)
