@@ -48,11 +48,12 @@ async def load_mcp_tools(tenant_id: str) -> list[BaseTool]:
     tools: list[BaseTool] = []
     try:
         async with MultiServerMCPClient(server_configs) as client:
-            raw_tools = await client.get_tools()
-            for t in raw_tools:
-                # Prefix tool name with server name for disambiguation
-                t.name = f"mcp_{name}_{t.name}"
-                tools.append(t)
+            for name in server_configs.keys():
+                raw_tools = await client.get_tools(server_name=name)
+                for t in raw_tools:
+                    # Prefix tool name with server name for disambiguation
+                    t.name = f"mcp_{name}_{t.name}"
+                    tools.append(t)
     except Exception:
         logger.exception("Failed to load MCP tools for tenant %s", tenant_id)
 
