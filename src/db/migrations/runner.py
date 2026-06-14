@@ -21,7 +21,6 @@ def run_migrations():
         return
 
     with psycopg.connect(uri, autocommit=True) as conn:
-        # Create tracking table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS _migrations (
                 filename VARCHAR(255) PRIMARY KEY,

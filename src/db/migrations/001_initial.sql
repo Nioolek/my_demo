@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Cron job metadata (extends LangGraph native cron)
+-- Cron job metadata
 CREATE TABLE IF NOT EXISTS cron_jobs_meta (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS cron_jobs_meta (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Thread metadata (extends LangGraph native threads)
+-- Thread metadata
 CREATE TABLE IF NOT EXISTS threads_meta (
     thread_id       VARCHAR(255) PRIMARY KEY,
     tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
