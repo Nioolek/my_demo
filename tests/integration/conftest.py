@@ -52,6 +52,9 @@ async def tenant_with_user(_init_pool):
         "headers": {"authorization": f"Bearer {token}"},
     }
 
+    await execute("DELETE FROM cron_jobs_meta WHERE tenant_id = %s", tenant_id)
+    await execute("DELETE FROM mcp_servers WHERE tenant_id = %s", tenant_id)
+    await execute("DELETE FROM channels WHERE tenant_id = %s", tenant_id)
     await execute("DELETE FROM users WHERE tenant_id = %s", tenant_id)
     await execute("DELETE FROM tenants WHERE id = %s", tenant_id)
 
@@ -82,6 +85,9 @@ async def tenant_with_admin(_init_pool):
         "admin_headers": {"authorization": f"Bearer {admin_token}"},
     }
 
+    await execute("DELETE FROM cron_jobs_meta WHERE tenant_id = %s", tenant_id)
+    await execute("DELETE FROM mcp_servers WHERE tenant_id = %s", tenant_id)
+    await execute("DELETE FROM channels WHERE tenant_id = %s", tenant_id)
     await execute("DELETE FROM skills_meta WHERE tenant_id = %s", tenant_id)
     await execute("DELETE FROM agents WHERE tenant_id = %s", tenant_id)
     await execute("DELETE FROM users WHERE tenant_id = %s", tenant_id)

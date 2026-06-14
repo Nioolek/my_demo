@@ -39,10 +39,11 @@ async def _ensure_dingtalk_user(payload: dict[str, Any]) -> str:
         return user["tenant_id"]
 
     # Find a tenant with a dingtalk channel configured
+    # Order by created_at DESC to get the most recently configured channel
     channel = await fetch_one(
         "SELECT c.tenant_id::text FROM channels c "
         "WHERE c.channel_type = 'dingtalk' AND c.enabled = true "
-        "LIMIT 1",
+        "ORDER BY c.created_at DESC LIMIT 1",
     )
     if not channel:
         logger.warning("No tenant with dingtalk channel found for auto-provision")
