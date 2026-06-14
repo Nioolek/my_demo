@@ -26,8 +26,10 @@ from src.api.tenants import router as tenants_router
 from src.api.auth_routes import router as auth_router
 from src.api.skills import router as skills_router
 from src.api.agents import router as agents_router
+from src.api.channels import router as channels_router
 
 app.include_router(tenants_router)
 app.include_router(auth_router)
 app.include_router(skills_router)
 app.include_router(agents_router)
+app.include_router(channels_router)
