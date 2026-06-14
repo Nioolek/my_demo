@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+.env
+.langgraph_api/

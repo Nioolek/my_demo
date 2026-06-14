@@ -4,7 +4,10 @@ import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
 
 import psycopg
 from psycopg.rows import dict_row
@@ -13,6 +16,9 @@ from psycopg_pool import AsyncConnectionPool
 
 # Register JSON/JSONB loaders globally so columns return Python objects
 set_json_loads(loads=json.loads)
+
+# Ensure .env is loaded (project root)
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 _pool: AsyncConnectionPool | None = None
 _pool_loop: asyncio.AbstractEventLoop | None = None

@@ -2,8 +2,14 @@
 
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+# langgraph dev sets DATABASE_URI=:memory: by default.
+# Override with our .env to use PostgreSQL.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 
 @asynccontextmanager

@@ -4,26 +4,36 @@ Called on every Run with the current config. Builds a fresh
 create_react_agent with the tenant's latest Skills/Tools/MCP.
 """
 
+import logging
 import os
-from typing import Any
+from pathlib import Path
 
-from langchain_core.messages import SystemMessage
+from dotenv import load_dotenv
+from langchain_core.runnables import RunnableConfig
 from langgraph.prebuilt import create_react_agent
+from langgraph_sdk.runtime import ServerRuntime
 
 from src.agent.tools import get_builtin_tools, load_tenant_skills, load_mcp_tools
 from src.db.client import fetch_one
+
+log = logging.getLogger(__name__)
+
+# Ensure .env is loaded (project root)
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=True)
 
 
 def _get_default_model():
     """Get the default chat model. Uses ChatOpenAI as default."""
     from langchain_openai import ChatOpenAI
+    model_name = os.environ.get("OPENAI_API_MODEL", "gpt-4o")
+    log.info("Using model: %s, base_url: %s", model_name, os.environ.get("OPENAI_BASE_URL"))
     return ChatOpenAI(
-        model=os.environ.get("DEFAULT_MODEL", "gpt-4o"),
+        model=model_name,
         temperature=0.7,
     )
 
 
-async def make_graph(config: dict, runtime: Any = None):
+async def make_graph(config: RunnableConfig, runtime: ServerRuntime):
     """Build agent graph dynamically per-request.
 
     Referenced by langgraph.json graphs config.
