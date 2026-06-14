@@ -45,14 +45,18 @@ async def make_graph(config: RunnableConfig, runtime: ServerRuntime):
     """
     configurable = config.get("configurable", {})
     tenant_id = configurable.get("tenant_id")
+    log.info("make_graph called: tenant_id=%s", tenant_id)
 
     agent_config = None
     if tenant_id:
-        agent_config = await fetch_one(
-            "SELECT model, system_prompt, temperature, config FROM agents "
-            "WHERE tenant_id = %s AND enabled = true LIMIT 1",
-            tenant_id,
-        )
+        try:
+            agent_config = await fetch_one(
+                "SELECT model, system_prompt, temperature, config FROM agents "
+                "WHERE tenant_id = %s AND enabled = true LIMIT 1",
+                tenant_id,
+            )
+        except Exception:
+            log.exception("Failed to load agent config for tenant %s", tenant_id)
 
     if agent_config:
         from langchain_openai import ChatOpenAI
@@ -61,19 +65,32 @@ async def make_graph(config: RunnableConfig, runtime: ServerRuntime):
             temperature=agent_config["temperature"],
         )
         system_prompt = agent_config["system_prompt"]
+        log.info("Loaded tenant agent config: model=%s", agent_config["model"])
     else:
         model = _get_default_model()
         system_prompt = "You are a helpful store manager assistant."
 
     tools = get_builtin_tools()
     if tenant_id:
-        tools.extend(await load_tenant_skills(tenant_id))
-        tools.extend(await load_mcp_tools(tenant_id))
+        try:
+            skills = await load_tenant_skills(tenant_id)
+            tools.extend(skills)
+            log.info("Loaded %d skills for tenant %s", len(skills), tenant_id)
+        except Exception:
+            log.exception("Failed to load skills for tenant %s", tenant_id)
+
+        try:
+            mcp = await load_mcp_tools(tenant_id)
+            tools.extend(mcp)
+            log.info("Loaded %d MCP tools for tenant %s", len(mcp), tenant_id)
+        except Exception:
+            log.exception("Failed to load MCP tools for tenant %s", tenant_id)
 
     graph = create_react_agent(
         model=model,
         tools=tools if tools else None,
         prompt=system_prompt,
     )
+    log.info("Graph built with %d tools", len(tools))
 
     return graph
