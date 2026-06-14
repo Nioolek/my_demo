@@ -167,6 +167,7 @@ async def dingtalk_webhook(request: Request):
     """Receive DingTalk robot callback messages.
 
     ACKs immediately (200), processes asynchronously.
+    Global rate limit: 60/minute per IP (configured in custom_app.py).
     """
     payload = await request.json()
 

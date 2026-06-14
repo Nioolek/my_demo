@@ -15,5 +15,35 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build: .
+    command: python -m src.db.migrations.runner
+    environment:
+      DATABASE_URI: postgresql://storeagent:storeagent@postgres:5432/storeagent
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  langgraph:
+    build: .
+    command: langgraph dev --no-browser --host 0.0.0.0
+    ports:
+      - "2024:2024"
+    environment:
+      DATABASE_URI: postgresql://storeagent:storeagent@postgres:5432/storeagent
+      APP_ENV: production
+      LOG_LEVEL: INFO
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import httpx; httpx.get('http://localhost:2024/info')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
 volumes:
   pgdata:
