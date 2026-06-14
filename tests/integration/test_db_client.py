@@ -1,0 +1,33 @@
+import pytest
+from src.db.client import get_pool, execute, fetch_one, fetch_all
+
+pytestmark = pytest.mark.integration
+
+
+@pytest.mark.asyncio
+async def test_pool_connects():
+    pool = await get_pool()
+    assert pool is not None
+    result = await fetch_one("SELECT 1 AS val")
+    assert result["val"] == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_insert_and_fetch():
+    await execute("CREATE TABLE IF NOT EXISTS _test_tbl (id INT, name TEXT)")
+    await execute("INSERT INTO _test_tbl (id, name) VALUES ($1, $2)", 1, "alice")
+    row = await fetch_one("SELECT name FROM _test_tbl WHERE id = $1", 1)
+    assert row["name"] == "alice"
+    await execute("DROP TABLE _test_tbl")
+
+
+@pytest.mark.asyncio
+async def test_fetch_all():
+    await execute("CREATE TABLE IF NOT EXISTS _test_tbl2 (id INT)")
+    await execute("INSERT INTO _test_tbl2 VALUES ($1)", 1)
+    await execute("INSERT INTO _test_tbl2 VALUES ($1)", 2)
+    rows = await fetch_all("SELECT id FROM _test_tbl2 ORDER BY id")
+    assert len(rows) == 2
+    assert rows[0]["id"] == 1
+    assert rows[1]["id"] == 2
+    await execute("DROP TABLE _test_tbl2")
