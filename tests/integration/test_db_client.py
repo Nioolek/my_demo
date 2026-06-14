@@ -15,8 +15,8 @@ async def test_pool_connects():
 @pytest.mark.asyncio
 async def test_execute_insert_and_fetch():
     await execute("CREATE TABLE IF NOT EXISTS _test_tbl (id INT, name TEXT)")
-    await execute("INSERT INTO _test_tbl (id, name) VALUES ($1, $2)", 1, "alice")
-    row = await fetch_one("SELECT name FROM _test_tbl WHERE id = $1", 1)
+    await execute("INSERT INTO _test_tbl (id, name) VALUES (%s, %s)", 1, "alice")
+    row = await fetch_one("SELECT name FROM _test_tbl WHERE id = %s", 1)
     assert row["name"] == "alice"
     await execute("DROP TABLE _test_tbl")
 
@@ -24,8 +24,8 @@ async def test_execute_insert_and_fetch():
 @pytest.mark.asyncio
 async def test_fetch_all():
     await execute("CREATE TABLE IF NOT EXISTS _test_tbl2 (id INT)")
-    await execute("INSERT INTO _test_tbl2 VALUES ($1)", 1)
-    await execute("INSERT INTO _test_tbl2 VALUES ($1)", 2)
+    await execute("INSERT INTO _test_tbl2 VALUES (%s)", 1)
+    await execute("INSERT INTO _test_tbl2 VALUES (%s)", 2)
     rows = await fetch_all("SELECT id FROM _test_tbl2 ORDER BY id")
     assert len(rows) == 2
     assert rows[0]["id"] == 1
