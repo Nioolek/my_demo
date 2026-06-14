@@ -29,6 +29,7 @@ from src.api.agents import router as agents_router
 from src.api.channels import router as channels_router
 from src.api.webhooks import router as webhooks_router
 from src.api.mcp import router as mcp_router
+from src.api.cron_jobs import router as cron_jobs_router
 
 app.include_router(tenants_router)
 app.include_router(auth_router)
@@ -37,3 +38,4 @@ app.include_router(agents_router)
 app.include_router(channels_router)
 app.include_router(webhooks_router)
 app.include_router(mcp_router)
+app.include_router(cron_jobs_router)
