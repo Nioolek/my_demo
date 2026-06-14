@@ -18,15 +18,18 @@ _dingtalk_channel = DingTalkChannel()
 
 
 async def _ensure_dingtalk_user(payload: dict[str, Any]) -> str:
-    """Look up or create a DingTalk user, return tenant_id.
+    """Look up or auto-create a DingTalk user.
 
-    Uses senderStaffId as user_id with channel_source='dingtalk'.
-    If the user doesn't exist, returns empty string (message will be rejected).
+    If the user exists, return their tenant_id.
+    If not, find a tenant with a DingTalk channel configured and
+    auto-create the user under that tenant.
+    Returns empty string if no matching tenant found.
     """
     user_id = payload.get("senderStaffId", "")
     if not user_id:
         return ""
 
+    # Check if user already exists
     user = await fetch_one(
         "SELECT tenant_id::text, name FROM users "
         "WHERE id = %s AND channel_source = 'dingtalk'",
@@ -35,7 +38,33 @@ async def _ensure_dingtalk_user(payload: dict[str, Any]) -> str:
     if user:
         return user["tenant_id"]
 
-    return ""
+    # Find a tenant with a dingtalk channel configured
+    channel = await fetch_one(
+        "SELECT c.tenant_id::text FROM channels c "
+        "WHERE c.channel_type = 'dingtalk' AND c.enabled = true "
+        "LIMIT 1",
+    )
+    if not channel:
+        logger.warning("No tenant with dingtalk channel found for auto-provision")
+        return ""
+
+    tenant_id = channel["tenant_id"]
+    sender_name = payload.get("senderNick", user_id)
+
+    await execute(
+        "INSERT INTO users (id, tenant_id, name, role, channel_source) "
+        "VALUES (%s, %s::uuid, %s, 'staff', 'dingtalk') "
+        "ON CONFLICT (channel_source, id) DO NOTHING",
+        user_id,
+        tenant_id,
+        sender_name,
+    )
+    logger.info(
+        "Auto-provisioned DingTalk user %s under tenant %s",
+        user_id,
+        tenant_id,
+    )
+    return tenant_id
 
 
 async def _create_agent_run(

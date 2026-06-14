@@ -53,3 +53,49 @@ async def test_process_dingtalk_message_creates_run(_init_pool):
         mock_user.assert_called_once()
         mock_run.assert_called_once()
         mock_send.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_dingtalk_auto_provision_user(async_client, tenant_with_user, _init_pool):
+    """New DingTalk user should be auto-created under the tenant with dingtalk channel."""
+    from src.db.client import execute, fetch_one
+
+    tenant_id = tenant_with_user["tenant_id"]
+
+    # Create a dingtalk channel for this tenant
+    await execute(
+        "INSERT INTO channels (tenant_id, channel_type, config) "
+        "VALUES (%s::uuid, 'dingtalk', '{}')",
+        tenant_id,
+    )
+
+    # Create a DingTalk user that doesn't exist yet
+    payload = {
+        "senderStaffId": "new-dt-user-999",
+        "senderNick": "New DT User",
+        "conversationType": "1",
+        "conversationId": "cid-auto-123",
+        "sessionWebhook": "",
+        "msgtype": "text",
+        "text": {"content": "Hello"},
+    }
+
+    # Call _ensure_dingtalk_user
+    from src.api.webhooks import _ensure_dingtalk_user
+    result_tenant = await _ensure_dingtalk_user(payload)
+
+    # Should find the tenant that has a dingtalk channel
+    assert result_tenant == tenant_id
+
+    # Verify user was created in DB
+    user = await fetch_one(
+        "SELECT id, tenant_id::text, name FROM users "
+        "WHERE id = 'new-dt-user-999' AND channel_source = 'dingtalk'",
+    )
+    assert user is not None
+    assert user["tenant_id"] == tenant_id
+    assert user["name"] == "New DT User"
+
+    # Cleanup
+    await execute("DELETE FROM users WHERE id = 'new-dt-user-999'")
+    await execute("DELETE FROM channels WHERE tenant_id = %s::uuid", tenant_id)
